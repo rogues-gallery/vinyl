@@ -6,6 +6,7 @@ var util = require('util');
 var expect = require('expect');
 var miss = require('mississippi');
 var cloneable = require('cloneable-readable');
+var saferBuffer = require('safer-buffer');
 
 var File = require('../');
 
@@ -13,6 +14,7 @@ var pipe = miss.pipe;
 var from = miss.from;
 var concat = miss.concat;
 var isCloneable = cloneable.isCloneable;
+var Buffer = saferBuffer.Buffer;
 
 var isWin = (process.platform === 'win32');
 
@@ -162,7 +164,7 @@ describe('File', function() {
     });
 
     it('sets contents', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val });
       expect(file.contents).toEqual(val);
       done();
@@ -269,7 +271,7 @@ describe('File', function() {
   describe('isBuffer()', function() {
 
     it('returns true when the contents are a Buffer', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val });
       expect(file.isBuffer()).toEqual(true);
       done();
@@ -292,7 +294,7 @@ describe('File', function() {
   describe('isStream()', function() {
 
     it('returns false when the contents are a Buffer', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val });
       expect(file.isStream()).toEqual(false);
       done();
@@ -315,7 +317,7 @@ describe('File', function() {
   describe('isNull()', function() {
 
     it('returns false when the contents are a Buffer', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val });
       expect(file.isNull()).toEqual(false);
       done();
@@ -343,7 +345,7 @@ describe('File', function() {
     };
 
     it('returns false when the contents are a Buffer', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val, stat: fakeStat });
       expect(file.isDirectory()).toEqual(false);
       done();
@@ -383,7 +385,7 @@ describe('File', function() {
     };
 
     it('returns false when the contents are a Buffer', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val, stat: fakeStat });
       expect(file.isSymbolic()).toEqual(false);
       done();
@@ -417,12 +419,18 @@ describe('File', function() {
 
   describe('clone()', function() {
 
+    var fakeStat = {
+      isSymbolicLink: function() {
+        return true;
+      },
+    };
+
     it('copies all attributes over with Buffer contents', function(done) {
       var options = {
         cwd: '/',
         base: '/test/',
         path: '/test/test.coffee',
-        contents: new Buffer('test'),
+        contents: Buffer.from('test'),
       };
       var file = new File(options);
       var file2 = file.clone();
@@ -441,7 +449,7 @@ describe('File', function() {
         cwd: '/',
         base: '/test/',
         path: '/test/test.js',
-        contents: new Buffer('test'),
+        contents: Buffer.from('test'),
       };
       var file = new File(options);
 
@@ -575,6 +583,24 @@ describe('File', function() {
       ], done);
     });
 
+    it('fixes file.symlink if file is a symbolic link', function(done) {
+      var val = '/test/test.js';
+      var options = {
+        cwd: '/',
+        base: '/test/',
+        path: '/test/test.coffee',
+        content: null,
+        stat: fakeStat,
+        symlink: val,
+      };
+      var file = new File(options);
+      var file2 = file.clone();
+
+      expect(file2).toNotBe(file);
+      expect(file2.symlink).toEqual(file.symlink);
+      done();
+    });
+
     it('copies all attributes over with null contents', function(done) {
       var options = {
         cwd: '/',
@@ -598,7 +624,7 @@ describe('File', function() {
         cwd: '/',
         base: '/test/',
         path: '/test/test.js',
-        contents: new Buffer('test'),
+        contents: Buffer.from('test'),
         stat: fs.statSync(__filename),
       };
 
@@ -617,7 +643,7 @@ describe('File', function() {
         cwd: path.normalize('/'),
         base: path.normalize('/test/'),
         path: path.normalize('/test/test.js'),
-        contents: new Buffer('test'),
+        contents: Buffer.from('test'),
       };
 
       var file = new File(options);
@@ -757,14 +783,14 @@ describe('File', function() {
     });
 
     it('returns correct format when Buffer contents and no path', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({ contents: val });
       expect(file.inspect()).toEqual('<File <Buffer 74 65 73 74>>');
       done();
     });
 
     it('returns correct format when Buffer contents and relative path', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File({
         cwd: '/',
         base: '/test/',
@@ -801,7 +827,7 @@ describe('File', function() {
   describe('contents get/set', function() {
 
     it('returns _contents', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File();
       file._contents = val;
       expect(file.contents).toEqual(val);
@@ -809,7 +835,7 @@ describe('File', function() {
     });
 
     it('sets _contents', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File();
       file.contents = val;
       expect(file._contents).toEqual(val);
@@ -817,7 +843,7 @@ describe('File', function() {
     });
 
     it('sets a Buffer', function(done) {
-      var val = new Buffer('test');
+      var val = Buffer.from('test');
       var file = new File();
       file.contents = val;
       expect(file.contents).toEqual(val);
@@ -1179,7 +1205,7 @@ describe('File', function() {
       var file = new File();
 
       function invalid() {
-        a = file.basename;
+        var a = file.basename;
       }
 
       expect(invalid).toThrow('No path specified! Can not get basename.');
